@@ -19,9 +19,15 @@ def to_smile(seq):
     
     new_seq = seq
     
-    for i, el in enumerate(seq):
-        if el == len(elems)-1:
-            new_seq = seq[:i]
+    if not len(seq):
+        return ""
+    
+    if seq[0] == elems.index(start_elem):
+        new_seq = seq[1:]
+        
+    for i, el in enumerate(new_seq):
+        if el == elems.index(end_elem):
+            new_seq = new_seq[:i]
             break
         
     return ''.join(map(lambda x: elems[x], new_seq))
@@ -59,15 +65,21 @@ def iterate_minibatches(seqs, features, batchsize, shuffle=False):
         
         yield np.array(X), np.array(Y), np.array(lengths)
         
-def generate_new(model, features):
+def generate_new(model, features, rand=True):
     
     start_vec = to_categorical(elems.index(start_elem), len(elems))[0]
     
-    raw = model.generate_sequence([np.concatenate([features, start_vec])], rand=True)
+    raw = model.generate_sequence([np.concatenate([features, start_vec])], rand=rand)
     
     return to_smile(raw)
 
-        
+def norm(text):
+    
+    temp = [elems.index(start_elem)] + [elems.index(x) for x in text]
+    temp.append(elems.index(end_elem))
+    
+    return temp
+
 start_elem = '<Start>'        
 end_elem = '<END>'
 

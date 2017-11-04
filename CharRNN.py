@@ -22,6 +22,8 @@ class CharRNN:
         
         self.lengths = tf.placeholder(tf.float64, shape=[None])
         
+        self.loss_weights = tf.placeholder(tf.float64, shape=[None])
+        
         # Embedding
         n_steps = tf.shape(self.X)[1]
         
@@ -54,8 +56,12 @@ class CharRNN:
         # Training utils
         
         self.Y = tf.placeholder(tf.float64, shape=[None, None, output_dim])
-
-        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=output_logits, labels=self.Y))
+        
+        loss = tf.nn.softmax_cross_entropy_with_logits(logits=output_logits, labels=self.Y)
+        
+        loss = tf.transpose(tf.transpose(loss) * self.loss_weights)
+        
+        self.loss = tf.reduce_mean(loss)
         
         # Optimizer 
         
@@ -74,21 +80,42 @@ class CharRNN:
         else:
             self.sess.run(tf.global_variables_initializer())
 
-    def train_step(self, X, Y, lengths):
+    def train_step(self, X, Y, lengths, loss_weights=[]):
         
         initial_states = np.zeros([len(X), self.state_shape])
         
+        if len(loss_weights) != len(X):
+            loss_weights = [1 for _ in range(len(X))]
+            
         feed_dict = {
             self.X: X,
             self.Y: Y,
             self.state: initial_states,
-            self.lengths: lengths
+            self.lengths: lengths,
+            self.loss_weights: loss_weights
         }
         
         _, loss = self.sess.run([self.optim, self.loss], feed_dict=feed_dict)
         
         return loss
     
+    def count_loss(self, X, Y, lengths):
+        initial_states = np.zeros([len(X), self.state_shape])
+        
+        loss_weights = [1 for _ in range(len(X))]
+        
+        feed_dict = {
+            self.X: X,
+            self.Y: Y,
+            self.state: initial_states,
+            self.lengths: lengths,
+            self.loss_weights: loss_weights
+        }
+        
+        loss = self.sess.run(self.loss, feed_dict=feed_dict)
+        
+        return loss
+        
     def generate_element(self, x, zero_state=True):
         
         if zero_state:
